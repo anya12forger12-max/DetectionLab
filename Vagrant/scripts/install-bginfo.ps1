@@ -4,10 +4,25 @@ Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Installing BGInfo..."
 if (!(Test-Path 'c:\Program Files\sysinternals')) {
   New-Item -Path 'c:\Program Files\sysinternals' -type directory -Force -ErrorAction SilentlyContinue
 }
-if (!(Test-Path 'c:\Program Files\sysinternals\bginfo.exe')) {
-  # SysInternals requires TLS 1.2
+$bginfoPath = 'c:\Program Files\sysinternals\bginfo.exe'
+if (Test-Path $bginfoPath) {
+  $signature = Get-AuthenticodeSignature -FilePath $bginfoPath
+  if ($signature.Status -ne 'Valid' -or
+      $signature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+    Remove-Item $bginfoPath -Force
+  }
+}
+if (!(Test-Path $bginfoPath)) {
+  # SysInternals requires TLS 1.2. Never fall back to plaintext HTTP: this
+  # binary is registered in an HKLM Run key and executes at every logon.
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-  (New-Object Net.WebClient).DownloadFile('http://live.sysinternals.com/bginfo.exe', 'c:\Program Files\sysinternals\bginfo.exe')
+  (New-Object Net.WebClient).DownloadFile('https://live.sysinternals.com/bginfo.exe', $bginfoPath)
+  $signature = Get-AuthenticodeSignature -FilePath $bginfoPath
+  if ($signature.Status -ne 'Valid' -or
+      $signature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+    Remove-Item $bginfoPath -Force
+    throw "Refusing to use an unsigned or untrusted BGInfo executable: $bginfoPath"
+  }
 }
 
 Copy-Item "c:\vagrant\resources\windows\background.bmp" 'c:\Program Files\sysinternals\background.bmp'

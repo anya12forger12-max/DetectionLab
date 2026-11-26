@@ -3,14 +3,10 @@
 Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Installing AutorunsToWinEventLog..."
 If ((Get-ScheduledTask -TaskName "AutorunsToWinEventLog" -ea silent) -eq $null)
 {
-    # Modify the installer to add an HTTP fallback until this gets fixed upstream in the windows-event-fowarding repo
-    # See https://github.com/clong/DetectionLab/issues/597
-    (Get-Content c:\Users\vagrant\AppData\Local\Temp\windows-event-forwarding-master\AutorunsToWinEventLog\Install.ps1 -Raw) -replace 'Invoke-WebRequest -Uri "https://live.sysinternals.com/autorunsc64.exe" -OutFile "\$autorunsPath"', 'Try {
-    (New-Object System.Net.WebClient).DownloadFile(''https://live.sysinternals.com/Autoruns64.exe'', $autorunsPath)
-  } Catch {
-    Write-Host "HTTPS connection failed. Switching to HTTP :("
-    (New-Object System.Net.WebClient).DownloadFile(''http://live.sysinternals.com/Autoruns64.exe'', $autorunsPath)
-  }' | Set-Content -Path "c:\Users\vagrant\AppData\Local\Temp\windows-event-forwarding-master\AutorunsToWinEventLog\Install.ps1"
+    # Run the upstream installer unchanged. It downloads Autoruns over HTTPS.
+    # Do not patch in an HTTP fallback: an on-path attacker can force the TLS
+    # request to fail and have arbitrary code executed by the scheduled task.
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     . c:\Users\vagrant\AppData\Local\Temp\windows-event-forwarding-master\AutorunsToWinEventLog\Install.ps1
     Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) AutorunsToWinEventLog installed. Starting the scheduled task. Future runs will begin at 11am"
     Start-ScheduledTask -TaskName "AutorunsToWinEventLog"
