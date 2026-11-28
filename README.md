@@ -57,3 +57,14 @@ Use an isolated network, authorize any testing you launch from the lab, and neve
 Created by Chris Long. A substantial portion of the code was adapted from Stefan Scherer's [packer-windows](https://github.com/StefanScherer/packer-windows) and [adfs2](https://github.com/StefanScherer/adfs2) projects. The lab also builds on work from Palantir, Olaf Hartong, Microsoft, Splunk, osquery/Fleet, Velociraptor, Red Canary, and many other open-source projects; the upstream README lists the full acknowledgements.
 
 MIT License — Copyright (c) 2017 Chris Long. See [LICENSE](LICENSE).
+
+## Quick start — 1 or 2 commands
+
+```bash
+./setup.sh          # install dependencies
+./setup.sh run      # start the project (when a run target exists)
+```
+
+`setup.sh` detects this repository's build system and installs the right toolchain
+dependencies. Use `./setup.sh test` to run the available checks. If a project has no
+standard run target, the script prints the correct command from the sections above.
