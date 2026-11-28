@@ -32,72 +32,59 @@ $WScriptShell = New-Object -ComObject WScript.Shell
 
 # Microsoft likes TLSv1.2 as well
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Downloading Autoruns64.exe..."
-Try { 
-  (New-Object System.Net.WebClient).DownloadFile('https://live.sysinternals.com/Autoruns64.exe', $autorunsPath) 
-} Catch { 
-  Write-Host "HTTPS connection failed. Switching to HTTP :("
-  (New-Object System.Net.WebClient).DownloadFile('http://live.sysinternals.com/Autoruns64.exe', $autorunsPath) 
+
+function Download-SysinternalsBinary {
+    param(
+        [Parameter(Mandatory = $true)][string]$Url,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+
+    if ($Url -notlike 'https://*') {
+        throw "Refusing to download Sysinternals binaries over plaintext HTTP: $Url"
+    }
+
+    (New-Object System.Net.WebClient).DownloadFile($Url, $Destination)
+
+    # An on-path attacker who can break TLS must not be able to substitute an
+    # unsigned executable that we later install or launch as SYSTEM.
+    $signature = Get-AuthenticodeSignature -FilePath $Destination
+    if ($signature.Status -ne 'Valid' -or
+        $signature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+        Remove-Item $Destination -Force -ErrorAction SilentlyContinue
+        throw "Refusing to use an unsigned or untrusted Sysinternals binary: $Destination"
+    }
 }
+
+Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Downloading Autoruns64.exe..."
+Download-SysinternalsBinary 'https://live.sysinternals.com/Autoruns64.exe' $autorunsPath
 $Shortcut = $WScriptShell.CreateShortcut($ShortcutLocation + "Autoruns.lnk")
 $Shortcut.TargetPath = $autorunsPath
 $Shortcut.Save()
 
 Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Downloading Procmon.exe..."
-Try { 
-  (New-Object System.Net.WebClient).DownloadFile('https://live.sysinternals.com/Procmon.exe', $procmonPath)
-} Catch { 
-  Write-Host "HTTPS connection failed. Switching to HTTP :("
-  (New-Object System.Net.WebClient).DownloadFile('http://live.sysinternals.com/Procmon.exe', $procmonPath)
-}
+Download-SysinternalsBinary 'https://live.sysinternals.com/Procmon.exe' $procmonPath
 $Shortcut = $WScriptShell.CreateShortcut($ShortcutLocation + "Process Monitor.lnk")
 $Shortcut.TargetPath = $procmonPath
 $Shortcut.Save()
 
 Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Downloading PsExec64.exe..."
-Try { 
-  (New-Object System.Net.WebClient).DownloadFile('https://live.sysinternals.com/PsExec64.exe', $psexecPath)
-} Catch { 
-  Write-Host "HTTPS connection failed. Switching to HTTP :("
-  (New-Object System.Net.WebClient).DownloadFile('http://live.sysinternals.com/PsExec64.exe', $psexecPath)
-}
+Download-SysinternalsBinary 'https://live.sysinternals.com/PsExec64.exe' $psexecPath
 
 Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Downloading procexp64.exe..."
-Try { 
-  (New-Object System.Net.WebClient).DownloadFile('https://live.sysinternals.com/procexp64.exe', $procexpPath)
-} Catch { 
-  Write-Host "HTTPS connection failed. Switching to HTTP :("
-  (New-Object System.Net.WebClient).DownloadFile('http://live.sysinternals.com/procexp64.exe', $procexpPath)
-}
+Download-SysinternalsBinary 'https://live.sysinternals.com/procexp64.exe' $procexpPath
 $Shortcut = $WScriptShell.CreateShortcut($ShortcutLocation + "Process Explorer.lnk")
 $Shortcut.TargetPath = $procexpPath
 $Shortcut.Save()
 
 Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Downloading sdelete64.exe..."
-Try { 
-  (New-Object System.Net.WebClient).DownloadFile('https://live.sysinternals.com/sdelete64.exe', $sdeletePath)
-}
-Catch { 
-  Write-Host "HTTPS connection failed. Switching to HTTP :("
-  (New-Object System.Net.WebClient).DownloadFile('http://live.sysinternals.com/sdelete64.exe', $sdeletePath)
-}
+Download-SysinternalsBinary 'https://live.sysinternals.com/sdelete64.exe' $sdeletePath
 
 Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Downloading Sysmon64.exe..."
-Try { 
-  (New-Object System.Net.WebClient).DownloadFile('https://live.sysinternals.com/Sysmon64.exe', $sysmonPath)
-} Catch { 
-  Write-Host "HTTPS connection failed. Switching to HTTP :("
-  (New-Object System.Net.WebClient).DownloadFile('http://live.sysinternals.com/Sysmon64.exe', $sysmonPath)
-}
+Download-SysinternalsBinary 'https://live.sysinternals.com/Sysmon64.exe' $sysmonPath
 Copy-Item $sysmonPath $sysmonDir
 
 Write-Host "$('[{0:HH:mm}]' -f (Get-Date)) Downloading Tcpview.exe..."
-Try { 
-  (New-Object System.Net.WebClient).DownloadFile('https://live.sysinternals.com/Tcpview.exe', $tcpviewPath)
-} Catch { 
-  Write-Host "HTTPS connection failed. Switching to HTTP :("
-  (New-Object System.Net.WebClient).DownloadFile('http://live.sysinternals.com/Tcpview.exe', $tcpviewPath)
-}
+Download-SysinternalsBinary 'https://live.sysinternals.com/Tcpview.exe' $tcpviewPath
 $Shortcut = $WScriptShell.CreateShortcut($ShortcutLocation + "Tcpview.lnk")
 $Shortcut.TargetPath = $tcpviewPath
 $Shortcut.Save()
